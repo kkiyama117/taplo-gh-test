@@ -24,28 +24,28 @@ jobs:
             os: macos-latest
     runs-on: ${{matrix.os}}
 
-  steps:
+    steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
+    
       - name: Cache cargo registry
         uses: actions/cache@v2
         with:
           path: ~/.cargo/registry
           # we may need to use it with Cargo.lock
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
-
+    
       - id: 'compile'
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-
+    
       - uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --target=${{ matrix.target }}
-
+    
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
