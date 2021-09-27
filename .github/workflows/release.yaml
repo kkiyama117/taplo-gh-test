@@ -195,7 +195,7 @@ jobs:
         run: echo "RELEASE_VERSION=$(echo ${GITHUB_REF#refs/tags/release-lsp-})" >> $GITHUB_ENV
       - name: Set release version in Cargo.toml
         run: |
-          awk 'NR==1,/version\s*=.*/{sub(/version\s*=.*/, "version = \"'${RELEASE_VERSION}'\"")} 1' taplo-cli/Cargo.toml > cargo_tmp
+          awk 'NR==1,/version\s*=.*/{sub(/version\s*=.*/, "version = \"'${RELEASE_VERSION}'\"")} 1' taplo-lsp/Cargo.toml > cargo_tmp
           mv cargo_tmp taplo-lsp/Cargo.toml
 
       - name: Install dependencies
