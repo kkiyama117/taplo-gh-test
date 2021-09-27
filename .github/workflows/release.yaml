@@ -1,0 +1,222 @@
+on:
+  push:
+    branches:
+      - master
+    tags:
+    - release-*
+
+name: Upload Release Asset
+# same as CI.toml, so please insert it to that file.
+jobs:
+  test_gen:
+    name: TOML Test Generation
+    runs-on: ubuntu-latest
+    if: "!contains(github.ref, 'refs/tags/release-js')"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Run test generator
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --manifest-path=util/test-gen/Cargo.toml -- -i test-data -o taplo/src/tests/
+      - name: Upload generated tests
+        uses: actions/upload-artifact@v1
+        with:
+          name: generated_tests
+          path: taplo/src/tests/generated
+ 
+  test:
+    name: Test on Rust stable
+    needs: test_gen
+    runs-on: ubuntu-latest
+    if: "!contains(github.ref, 'refs/tags/release-js')"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Download generated tests
+        uses: actions/download-artifact@v1
+        with:
+          name: generated_tests
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        name: Test Taplo
+        with:
+          command: test
+          args: -p taplo
+      - uses: actions-rs/cargo@v1
+        name: Test Taplo-cli
+        with:
+          command: test
+          args: -p taplo-cli
+
+  release-cli:
+    name: Create github release with binary
+    needs: test
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/release-cli-')
+    strategy:
+      matrix:
+        rust:
+          - stable
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-pc-windows-gnu
+          - x86_64-apple-darwin
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-pc-windows-gnu
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+    
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo build
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Retrieve release version
+        run: echo "RELEASE_VERSION=$(echo ${GITHUB_REF#refs/tags/release-cli-})" >> $GITHUB_ENV
+      - name: Set release version in Cargo.toml
+        run: |
+          awk 'NR==1,/version\s*=.*/{sub(/version\s*=.*/, "version = \"'${RELEASE_VERSION}'\"")} 1' taplo-cli/Cargo.toml > cargo_tmp
+          mv cargo_tmp taplo-cli/Cargo.toml
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          target: ${{ matrix.target }}
+          override: true
+    
+      - name: Build binary 
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target=${{ matrix.target }}
+    
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: ${{ github.ref }}
+          name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+          files: |
+            target/release/taplo
+
+  release-lsp:
+    name: Create github release with binary
+    needs: test
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/release-lsp-')
+    strategy:
+      matrix:
+        rust:
+          - stable
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-pc-windows-gnu
+          - x86_64-apple-darwin
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-pc-windows-gnu
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+    
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo build
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Retrieve release version
+        run: echo "RELEASE_VERSION=$(echo ${GITHUB_REF#refs/tags/release-lsp-})" >> $GITHUB_ENV
+      - name: Set release version in Cargo.toml
+        run: |
+          awk 'NR==1,/version\s*=.*/{sub(/version\s*=.*/, "version = \"'${RELEASE_VERSION}'\"")} 1' taplo-lsp/Cargo.toml > cargo_tmp
+          mv cargo_tmp taplo-lsp/Cargo.toml
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          target: ${{ matrix.target }}
+          override: true
+    
+      - name: Build binary 
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target=${{ matrix.target }}
+    
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: ${{ github.ref }}
+          name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+          files: |
+            target/release/taplo-lsp

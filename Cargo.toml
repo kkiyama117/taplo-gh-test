@@ -1,9 +1,12 @@
-[package]
-name = "taplo-dummy"
-version = "0.1.0"
-authors = ["Wojciech Bartnik <yisonPylkita@gmail.com>"]
-edition = "2018"
+[workspace]
+exclude = ["util/schema-gen", "util/test-gen", "util/schema-index"]
+members = ["taplo-lsp", "taplo-cli", "taplo", "lsp-async-stub"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
 
-[dependencies]
+[profile.bench]
+lto = true
+opt-level = 3

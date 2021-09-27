@@ -1,4 +1,4 @@
-# gh-release-automation
-A dummy repo to see how GitHub Releases automation works for Rust projects
+# Taplo CI Test repo
 
-See [Releases](https://github.com/yisonPylkita/gh-release-automation/releases) page for a result
+This is the demo repository for testing [Taplo](https://github.com/tamasfe/taplo/) (forked only for it). Do not use this and I'll delete it soon after the change is included in original one
+
