@@ -32,13 +32,13 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cargo/registry
-          # we may need to use it with Cargo.lock
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
     
       - id: 'compile'
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
+          target: ${{ matrix.target }}
           override: true
     
       - uses: actions-rs/cargo@v1
