@@ -11,7 +11,7 @@ jobs:
   test_gen:
     name: TOML Test Generation
     runs-on: ubuntu-latest
-    if: "!contains(github.ref, 'refs/tags/release-js')"
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/release-')
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust toolchain
@@ -35,7 +35,7 @@ jobs:
     name: Test on Rust stable
     needs: test_gen
     runs-on: ubuntu-latest
-    if: "!contains(github.ref, 'refs/tags/release-js')"
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/release-')
     steps:
       - uses: actions/checkout@v2
       - name: Cache cargo registry
