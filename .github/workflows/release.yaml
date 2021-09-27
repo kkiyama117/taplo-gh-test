@@ -88,10 +88,16 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+            name: taplo-x86_64-unknown-linux-gnu.tar.gz
+            base: taplo
           - target: x86_64-pc-windows-gnu
             os: ubuntu-latest
+            base: taplo.exe
+            name: taplo-windows-x86_64.zip
           - target: x86_64-apple-darwin
             os: macos-latest
+            base: taplo
+            name: taplo-x86_64-apple-darwin-gnu.tar.gz
     runs-on: ${{matrix.os}}
 
     steps:
@@ -139,18 +145,34 @@ jobs:
         with:
           command: build
           args: --release --target=${{ matrix.target }}
-    
+
+      - name: Package
+        shell: bash
+        run: |
+          strip target/${{ matrix.target }}/release/${{ matrix.base }}
+          cd target/${{ matrix.target }}/release
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]
+          then
+            zip ../../../${{ matrix.name }} ${{ matrix.base }}
+          else
+            tar czvf ../../../${{ matrix.name }} ${{ matrix.base }}
+          fi
+          cd -
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           tag_name: ${{ github.ref }}
-          name: ${{ github.ref }}
+          name: ${ RELEASE_VERSION }
           draft: false
           prerelease: false
           files: |
-            target/release/taplo
+            target/${{ matrix.target }}/release/taplo-*.tar.gz
+            target/${{ matrix.target }}/release/taplo-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-lsp:
     name: Create github release with binary
@@ -165,10 +187,16 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+            name: taplo-x86_64-unknown-linux-gnu.tar.gz
+            base: taplo
           - target: x86_64-pc-windows-gnu
             os: ubuntu-latest
+            base: taplo.exe
+            name: taplo-windows-x86_64.zip
           - target: x86_64-apple-darwin
             os: macos-latest
+            base: taplo
+            name: taplo-x86_64-apple-darwin-gnu.tar.gz
     runs-on: ${{matrix.os}}
 
     steps:
@@ -216,6 +244,19 @@ jobs:
         with:
           command: build
           args: --release --target=${{ matrix.target }}
+
+      - name: Package
+        shell: bash
+        run: |
+          strip target/${{ matrix.target }}/release/${{ matrix.base }}
+          cd target/${{ matrix.target }}/release
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]
+          then
+            zip ../../../${{ matrix.name }} ${{ matrix.base }}
+          else
+            tar czvf ../../../${{ matrix.name }} ${{ matrix.base }}
+          fi
+          cd -
     
       - name: Create Release
         id: create_release
@@ -223,9 +264,12 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           tag_name: ${{ github.ref }}
-          name: ${{ github.ref }}
+          name: ${ RELEASE_VERSION }
           draft: false
           prerelease: false
           files: |
-            target/release/taplo-lsp
+            target/${{ matrix.target }}/release/taplo-lsp-*.tar.gz
+            target/${{ matrix.target }}/release/taplo-lsp-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
